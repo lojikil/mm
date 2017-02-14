@@ -11,6 +11,7 @@
  */
 typedef struct MLIST {
     void *item;
+    struct MLIST *next;
     uint32_t count;
 } MList;
 
@@ -23,10 +24,14 @@ typedef struct MLIST {
  * carML/c
  */
 
+static int acall = 0, retcall = 0, relcall = 0, wcall = 0;
+
+MList *init();
 void *alloc(size_t, MList *);
 void retain(void *, MList *);
 void release(void *, MList *); 
 void *weakalloc(size_t, MList *);
+void clean(MList *);
 
 /* actual testing stuffs.
  */
@@ -46,12 +51,60 @@ typedef struct ULIST {
     struct ULIST *next;
 } UList;
 
-UList *cons(UList *, UList *);
-UList *car(UList *);
-UList *cdr(UList *);
+UList *str2lst(char *, size_t, MList *);
+UList *int2lst(int, MList *);
+UList *cons(UList *, UList *, MList *);
+UList *car(UList *, MList *);
+UList *cdr(UList *, MList *);
 void walk(UList *);
+void print(UList *);
 
 int
 main() {
+    char *t0 = nil, *t1 = nil;
+    int tmp = 0;
+    MList *region = nil;
+    UList *userdata = nil, *tmpnode = nil;
 
+    region = init();
+    t0 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
+    t1 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
+    printf("Enter a string: ");
+    scanf("%128s", &t0);
+    tmpnode = str2lst(t0, sizeof(char) * 128, region); 
+    userdata = cons(tmpnode, nil, region);
+    while(tmp != -1) {
+        printf("Enter an integer: ");
+        scanf("%d", &tmp);
+        if(tmp != -1) {
+            tmpnode = int2lst(tmp, region);
+            userdata = cons(tmpnode, userdata, region);
+        }
+    }
+    printf("Enter a string: ");
+    scanf("%128s", &t1);
+    tmpnode = str2lst(t1, sizeof(char) * 128, region);
+    userdata = cons(tmpnode, userdata, region);
+
+    printf("allocated chars should work like normal strings:\n");
+    printf("t0: %s\nt1: %s\n", t0, t1);
+
+    printf("We should be able to walk that list too:\n");
+    walk(userdata);
+    tmpnode = userdata;
+    while(tmpnode != nil) {
+        tmpnode = car(userdata);
+        userdata = cdr(userdata);
+        release(tmpnode);
+    }
+    release(t0);
+    release(t1);
+
+    printf("some statistics: ");
+    printf("allocation calls: %d\n", acall);
+    printf("weak allocation calls: %d\n", wcall);
+    printf("retain calls: %d\n", retcall);
+    printf("release calls: %d\n", relcall);
+
+    clean(region);
 }

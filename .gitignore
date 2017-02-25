@@ -2,3 +2,5 @@
 *.bak
 *.o
 refcount
+dump
+dump*

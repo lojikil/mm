@@ -80,9 +80,9 @@ main() {
     debugln;
     region = init();
     debugln;
-    t0 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
+    t0 = (char *) rcalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
     debugln;
-    t1 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
+    t1 = (char *) rcalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
     debugln;
     printf("Enter a string: ");
     fgets(t0, 128, stdin);
@@ -98,8 +98,9 @@ main() {
             userdata = cons(tmpnode, userdata, region);
         }
     }
+    printf("t1 == nil? %s\n", t1 == nil ? "yes" : "no");
     printf("Enter a string: ");
-    scanf("%128s", t1);
+    fgets(t1, 128, stdin);
     tmpnode = str2lst(t1, sizeof(char) * 128, region);
     userdata = cons(tmpnode, userdata, region);
 
@@ -117,13 +118,14 @@ main() {
     release(t0, region);
     release(t1, region);
 
-    printf("some statistics: ");
+    printf("some statistics: \n");
     printf("allocation calls: %d\n", acall);
     printf("weak allocation calls: %d\n", wcall);
     printf("retain calls: %d\n", retcall);
     printf("release calls: %d\n", relcall);
-
     clean(region);
+
+    return 0;
 }
 
 MList
@@ -138,6 +140,8 @@ void *
 rcalloc(size_t sze, MList *region) {
     MList *tmp = region;
     void *data = nil;
+
+    acall += 1;
 
     while(tmp->next != nil) {
         tmp = tmp->next;
@@ -157,6 +161,8 @@ void
 retain(void *object, MList *region) {
     MList *tmp = region;
 
+    retcall += 1;
+
     while(tmp != nil) {
         if(tmp->object == object) {
             tmp->count += 1;
@@ -169,6 +175,8 @@ retain(void *object, MList *region) {
 void
 release(void *object, MList * region) {
     MList *tortoise = region, *hare = region;
+
+    relcall += 1;
 
     while(hare != nil) {
         if(hare->object == object) {
@@ -190,6 +198,8 @@ void *
 weakalloc(size_t sze, MList *region) {
     MList *tmp = region;
     void *data = nil;
+
+    wcall += 1;
 
     debugln;
     while(tmp->next != nil) {
@@ -223,6 +233,7 @@ UList *
 str2lst(char * str, size_t sze, MList *region) {
     UList *cell = (UList *)rcalloc(sizeof(UList), region);
     retain(str, region);
+    cell->type = LSTRING;
     cell->object.s = str;
     return cell;
 }
@@ -230,6 +241,7 @@ str2lst(char * str, size_t sze, MList *region) {
 UList *
 int2lst(int i, MList *region) {
     UList *cell = (UList *)rcalloc(sizeof(UList), region);
+    cell->type = LINT;
     cell->object.i = i;
     return cell;
 }

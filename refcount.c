@@ -72,7 +72,7 @@ void print(UList *);
 
 int
 main() {
-    char *t0 = nil, *t1 = nil, dummy;
+    char *t0 = nil, *t1 = nil;
     int tmp = 0;
     MList *region = nil;
     UList *userdata = nil, *tmpnode = nil;
@@ -80,16 +80,15 @@ main() {
     debugln;
     region = init();
     debugln;
-    t0 = (char *) rcalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
+    t0 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
     debugln;
-    t1 = (char *) rcalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
+    t1 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
     debugln;
     printf("Enter a string: ");
     fgets(t0, 128, stdin);
     printf("you entered: %s\n", t0);
     tmpnode = str2lst(t0, sizeof(char) * 128, region); 
     userdata = cons(tmpnode, nil, region);
-    scanf("%c", &dummy); 
     while(tmp != -1) {
         printf("Enter an integer: ");
         scanf("%d", &tmp);
@@ -100,7 +99,12 @@ main() {
     }
     printf("t1 == nil? %s\n", t1 == nil ? "yes" : "no");
     printf("Enter a string: ");
-    fgets(t1, 128, stdin);
+    char *ctmp = fgets(t1, 128, stdin);
+    if(ctmp == nil) {
+        printf("fgets(3) returned nil!\n");
+    } else if(feof(stdin)) {
+        printf("error on stdin?");
+    }
     tmpnode = str2lst(t1, sizeof(char) * 128, region);
     userdata = cons(tmpnode, userdata, region);
 

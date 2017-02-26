@@ -103,6 +103,8 @@ main() {
             userdata = cons(tmpnode, userdata, region);
         }
     }
+    char dummy;
+    scanf("%c\n", &dummy);
     printf("t1 == nil? %s\n", t1 == nil ? "yes" : "no");
     printf("Enter a string: ");
     char *ctmp = fgets(t1, 128, stdin);
@@ -113,6 +115,7 @@ main() {
     } else {
         printf("should have entered a string... but didn't?\n");
     }
+    printf("strlens: %lu and %lu\n", strnlen(t0, 128), strnlen(t1, 128));
     tmpnode = str2lst(t1, sizeof(char) * 128, region);
     userdata = cons(tmpnode, userdata, region);
 

@@ -6,7 +6,9 @@
 #define nil NULL
 #define nul '\0'
 
-#define debugln printf("here %d\n", __LINE__)
+static const uint8_t debugging = 0;
+
+#define debugln if(debugging) printf("here %d\n", __LINE__) 
 
 /* using a flat list of memory references
  * right now; would be neat to use something
@@ -74,8 +76,9 @@ void print(UList *);
 
 int
 main() {
-    char *t0 = nil, *t1 = nil;
+    char *t0 = nil, *t1 = nil, *ctmp = nil, dummy;
     int tmp = 0;
+    size_t len = 0;
     MList *region = nil;
     UList *userdata = nil, *tmpnode = nil;
 
@@ -86,12 +89,16 @@ main() {
     debugln;
     t1 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
     debugln;
-    printf("t0 stats: \n");
-    printstats(t0, region);
-    printf("t1 stats: \n");
-    printstats(t1, region);
+    if(debugging) {
+        printf("t0 stats: \n");
+        printstats(t0, region);
+        printf("t1 stats: \n");
+        printstats(t1, region);
+    }
     printf("Enter a string: ");
     fgets(t0, 128, stdin);
+    len = strnlen(t0, 128);
+    t0[len - 1] = nul;
     printf("you entered: %s\n", t0);
     tmpnode = str2lst(t0, sizeof(char) * 128, region); 
     userdata = cons(tmpnode, nil, region);
@@ -103,19 +110,24 @@ main() {
             userdata = cons(tmpnode, userdata, region);
         }
     }
-    char dummy;
-    scanf("%c\n", &dummy);
-    printf("t1 == nil? %s\n", t1 == nil ? "yes" : "no");
-    printf("Enter a string: ");
-    char *ctmp = fgets(t1, 128, stdin);
-    if(ctmp == nil) {
-        printf("fgets(3) returned nil!\n");
-    } else if(feof(stdin)) {
-        printf("error on stdin?");
-    } else {
-        printf("should have entered a string... but didn't?\n");
+    scanf("%c", &dummy);
+    if(debugging) {
+        printf("t1 == nil? %s\n", t1 == nil ? "yes" : "no");
     }
-    printf("strlens: %lu and %lu\n", strnlen(t0, 128), strnlen(t1, 128));
+    printf("Enter a string: ");
+    fgets(t1, 128, stdin);
+    len = strnlen(t1, 128);
+    t1[len - 1] = nul;
+    if(debugging) {
+        if(ctmp == nil) {
+            printf("fgets(3) returned nil!\n");
+        } else if(feof(stdin)) {
+            printf("error on stdin?");
+        } else {
+            printf("should have entered a string... but didn't?\n");
+        }
+        printf("strlens: %lu and %lu\n", strnlen(t0, 128), strnlen(t1, 128));
+    }
     tmpnode = str2lst(t1, sizeof(char) * 128, region);
     userdata = cons(tmpnode, userdata, region);
 
@@ -133,7 +145,7 @@ main() {
     release(t0, region);
     release(t1, region);
 
-    printf("some statistics: \n");
+    printf("\nsome statistics: \n");
     printf("allocation calls: %d\n", acall);
     printf("weak allocation calls: %d\n", wcall);
     printf("retain calls: %d\n", retcall);
@@ -188,7 +200,9 @@ rcalloc(size_t sze, MList *region) {
     tmp->size = sze;
 
     data = malloc(sze);
-    printf("allocated %p and %p\n", tmp, data);
+    if(debugging) {
+        printf("allocated %p and %p\n", tmp, data);
+    }
     tmp->object = data;
     return data;
 }
@@ -219,7 +233,9 @@ release(void *object, MList * region) {
             hare->count -= 1;
             if(hare->count <= 0) {
                 tortoise->next = hare->next;
-                printf("freeing two hares: %p and %p\n", hare, hare->object);
+                if(debugging) {
+                    printf("freeing two hares: %p and %p\n", hare, hare->object);
+                }
                 free(hare->object);
                 free(hare);
                 break;
@@ -252,7 +268,9 @@ weakalloc(size_t sze, MList *region) {
     data = malloc(sze);
     tmp->object = data;
     debugln;
-    printf("weakly allocated %p and %p\n", tmp, data);
+    if(debugging) {
+        printf("weakly allocated %p and %p\n", tmp, data);
+    }
     return data;
 }
 
@@ -263,7 +281,9 @@ clean(MList *region) {
     while(tmp != nil) {
         tmp0 = tmp;
         tmp = tmp->next;
-        printf("cleaning two objects: %p and %p\n", tmp0, tmp0->object);
+        if(debugging) {
+            printf("cleaning two objects: %p and %p\n", tmp0, tmp0->object);
+        }
         if(tmp0->object != nil && tmp0->size > 0) {
             free(tmp0->object);
         }
@@ -321,18 +341,24 @@ walk(UList *hd) {
         return;
     }
 
+    printf("(");
     while(tmp != nil) {
         print(tmp->object.l);
+        if(tmp->next != nil) {
+            printf(" ");
+        }
         tmp = tmp->next;
     }
+
+    printf(")");
 }
 
 void
 print(UList *hd){
     if(hd->type == LINT) {
-        printf("%d ", hd->object.i);
+        printf("%d", hd->object.i);
     } else if(hd->type == LSTRING) {
-        printf("%s ", hd->object.s);
+        printf("\"%s\"", hd->object.s);
     } else {
         walk(hd->object.l);
     }

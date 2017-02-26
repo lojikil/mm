@@ -16,6 +16,7 @@
  */
 typedef struct MLIST {
     void *object;
+    size_t size;
     struct MLIST *next;
     uint32_t count;
 } MList;
@@ -32,6 +33,7 @@ typedef struct MLIST {
 static int acall = 0, retcall = 0, relcall = 0, wcall = 0;
 
 MList *init();
+void printstats(void *, MList *);
 void *rcalloc(size_t, MList *);
 void retain(void *, MList *);
 void release(void *, MList *); 
@@ -84,6 +86,10 @@ main() {
     debugln;
     t1 = (char *) weakalloc(sizeof(char) * 128, region); // we turn around & retain in str2lst, so...
     debugln;
+    printf("t0 stats: \n");
+    printstats(t0, region);
+    printf("t1 stats: \n");
+    printstats(t1, region);
     printf("Enter a string: ");
     fgets(t0, 128, stdin);
     printf("you entered: %s\n", t0);
@@ -104,6 +110,8 @@ main() {
         printf("fgets(3) returned nil!\n");
     } else if(feof(stdin)) {
         printf("error on stdin?");
+    } else {
+        printf("should have entered a string... but didn't?\n");
     }
     tmpnode = str2lst(t1, sizeof(char) * 128, region);
     userdata = cons(tmpnode, userdata, region);
@@ -137,7 +145,26 @@ MList
     MList *tmp = (MList *)malloc(sizeof(MList));
     tmp->next = nil;
     tmp->count = -1;
+    tmp->size = 0;
     return tmp;
+}
+
+void
+printstats(void *object, MList *region) {
+    uint8_t flag = 0;
+    MList *tmp = region;
+    printf("printing stats for %p\n", object);
+    while(tmp != nil) {
+        if(tmp-> object == object) {
+            flag = 1;
+            printf("size: %lu\n", tmp->size);
+        }
+        tmp = tmp->next;
+    }
+
+    if(!flag) {
+        printf("object not found\n");
+    }
 }
 
 void *
@@ -155,8 +182,10 @@ rcalloc(size_t sze, MList *region) {
     tmp = tmp->next;
     tmp->next = nil;
     tmp->count = 1;
+    tmp->size = sze;
 
     data = malloc(sze);
+    printf("allocated %p and %p\n", tmp, data);
     tmp->object = data;
     return data;
 }
@@ -187,6 +216,7 @@ release(void *object, MList * region) {
             hare->count -= 1;
             if(hare->count <= 0) {
                 tortoise->next = hare->next;
+                printf("freeing two hares: %p and %p\n", hare, hare->object);
                 free(hare->object);
                 free(hare);
                 break;
@@ -214,10 +244,12 @@ weakalloc(size_t sze, MList *region) {
     tmp = tmp->next;
     tmp->next = nil;
     tmp->count = 0;
+    tmp->size = sze;
     debugln;
     data = malloc(sze);
     tmp->object = data;
     debugln;
+    printf("weakly allocated %p and %p\n", tmp, data);
     return data;
 }
 
@@ -228,8 +260,11 @@ clean(MList *region) {
     while(tmp != nil) {
         tmp0 = tmp;
         tmp = tmp->next;
-        free(tmp0->object);
-        free(tmp);
+        printf("cleaning two objects: %p and %p\n", tmp0, tmp0->object);
+        if(tmp0->object != nil && tmp0->size > 0) {
+            free(tmp0->object);
+        }
+        free(tmp0);
     }
 }
 

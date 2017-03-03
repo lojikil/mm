@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <strings.h>
 #include <stdint.h>
 
 #define nil NULL
@@ -96,7 +96,7 @@ main() {
         printstats(t1, region);
     }
     printf("Enter a string: ");
-    fgets(t0, 128, stdin);
+    ctmp = fgets(t0, 128, stdin);
     len = strnlen(t0, 128);
     t0[len - 1] = nul;
     printf("you entered: %s\n", t0);
@@ -115,7 +115,7 @@ main() {
         printf("t1 == nil? %s\n", t1 == nil ? "yes" : "no");
     }
     printf("Enter a string: ");
-    fgets(t1, 128, stdin);
+    ctmp = fgets(t1, 128, stdin);
     len = strnlen(t1, 128);
     t1[len - 1] = nul;
     if(debugging) {
@@ -158,9 +158,10 @@ main() {
 MList
 *init(){
     MList *tmp = (MList *)malloc(sizeof(MList));
+    tmp->object = nil;
+    tmp->size = 0;
     tmp->next = nil;
     tmp->count = -1;
-    tmp->size = 0;
     return tmp;
 }
 
